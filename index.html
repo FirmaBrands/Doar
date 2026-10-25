@@ -501,8 +501,8 @@ html.rec-live *{cursor:none !important}
 (function(){
   var toast = document.getElementById('recToast'), msg = document.getElementById('recMsg');
   var params = new URLSearchParams(location.search);
-  var SPEED = +params.get('speed') || 140;      // px per second while cruising
-  var RAMP = 1.4;                                // seconds to ease in / out
+  var SPEED = +params.get('speed') || 210;      // px per second while cruising
+  var RAMP = 2.4;                                // seconds to ease in / out
   var HOLD_START = 2.8, HOLD_END = 2.0;          // seconds held still at top / bottom
   var BITRATE = (+params.get('mbps') || 40) * 1e6;
   var busy = false, rec = null, stream = null, chunks = [], scrollRaf = 0, hideT = 0;
@@ -523,12 +523,14 @@ html.rec-live *{cursor:none !important}
   function frames(n){ return new Promise(function(r){ (function f(){ if (n-- <= 0) r(); else requestAnimationFrame(f); })(); }); }
 
   function scrollPath(D){
-    var T = D / SPEED + RAMP, v = D / (T - RAMP), a = v / RAMP;
+    // velocity eases in/out with a smootherstep ramp (no jolt at the start); cruise speed = SPEED
+    var T = D / SPEED + RAMP, v = D / (T - RAMP);
+    function ramp(u){ return v * RAMP * (Math.pow(u,6) - 3*Math.pow(u,5) + 2.5*Math.pow(u,4)); }
     return { T: T, at: function(t){
       if (t <= 0) return 0; if (t >= T) return D;
-      if (t < RAMP) return 0.5 * a * t * t;
-      if (t > T - RAMP) return D - 0.5 * a * (T - t) * (T - t);
-      return 0.5 * a * RAMP * RAMP + v * (t - RAMP);
+      if (t < RAMP) return ramp(t / RAMP);
+      if (t > T - RAMP) return D - ramp((T - t) / RAMP);
+      return v * RAMP * 0.5 + v * (t - RAMP);
     }};
   }
 
